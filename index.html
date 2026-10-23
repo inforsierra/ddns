@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DDNS</title>
+<meta name="theme-color" content="#0b5d1e">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="DDNS">
+<style>
+  :root { --verde:#0b5d1e; --verde2:#12802a; --gris:#f2f5f2; --borde:#d5ddd5; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+         background:var(--gris); color:#16211a; padding-bottom:24px; }
+  header { background:var(--verde); color:#fff; padding:14px 16px; display:flex;
+           align-items:center; gap:8px; position:sticky; top:0; z-index:5; }
+  header h1 { font-size:18px; margin:0; flex:1; font-weight:600; }
+  header button { background:rgba(255,255,255,.16); color:#fff; border:1px solid rgba(255,255,255,.35);
+                  border-radius:8px; padding:6px 10px; font-size:13px; }
+  main { padding:14px 16px; }
+  label { display:block; font-size:13px; color:#3c4a3f; margin:14px 0 6px; }
+  input[type=url], input[type=text] {
+    width:100%; padding:12px; font-size:15px; border:1px solid var(--borde);
+    border-radius:10px; background:#fff; }
+  .fila { display:flex; align-items:center; gap:10px; margin-top:14px; font-size:14px; color:#3c4a3f; }
+  select { padding:10px; font-size:14px; border:1px solid var(--borde); border-radius:10px; background:#fff; }
+  button.accion { width:100%; padding:15px; font-size:16px; font-weight:600; border:0; border-radius:12px;
+                  margin-top:14px; color:#fff; background:var(--verde2); }
+  button.sec { background:#fff; color:#3c4a3f; border:1px solid var(--borde); font-weight:500; font-size:14px; padding:12px; }
+  button:active { transform:scale(.99); }
+  .estado { margin-top:16px; padding:12px; border-radius:10px; background:#fff; border:1px solid var(--borde);
+            font-size:13px; line-height:1.5; white-space:pre-wrap; }
+  .ok { color:#0b6b1f; font-weight:600; }
+  .mal { color:#a1180f; font-weight:600; }
+  pre#log { margin-top:14px; background:#0f1a12; color:#c8f0cf; padding:12px; border-radius:10px;
+            font-size:11px; line-height:1.5; max-height:320px; overflow:auto; white-space:pre-wrap;
+            word-break:break-word; }
+  dialog { border:0; border-radius:14px; padding:0; max-width:92vw; }
+  dialog .cuerpo { padding:16px 18px; font-size:14px; line-height:1.6; color:#26332a; }
+  dialog h2 { margin:0 0 10px; font-size:16px; }
+  dialog button { margin:14px 18px 18px; width:calc(100% - 36px); padding:12px; border:0; border-radius:10px;
+                  background:var(--verde2); color:#fff; font-size:15px; font-weight:600; }
+  .pie { text-align:center; font-size:11px; color:#7c8a7f; margin-top:18px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>DDNS</h1>
+  <button id="btnAyuda">¿Ayuda?</button>
+</header>
+
+<main>
+  <label for="url">URL de actualización</label>
+  <input id="url" type="url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false"
+         placeholder="https://tudominio.com/cpanelwebcall/xxxxxxxx">
+
+  <label for="host">Host a comprobar (opcional, solo informativo)</label>
+  <input id="host" type="text" autocomplete="off" autocapitalize="off" spellcheck="false"
+         placeholder="casa.midominio.com">
+
+  <div class="fila">
+    <input type="checkbox" id="auto" style="width:20px;height:20px;">
+    <label for="auto" style="margin:0;">Actualizar automáticamente mientras esté abierta</label>
+  </div>
+  <div class="fila">
+    cada
+    <select id="mins">
+      <option value="5">5 minutos</option>
+      <option value="10" selected>10 minutos</option>
+    </select>
+  </div>
+
+  <button class="accion" id="btnGo">Actualizar ahora</button>
+  <button class="accion sec" id="btnClear" style="margin-top:8px;">Borrar registro</button>
+
+  <div class="estado" id="estado">Sin actividad todavía.</div>
+  <pre id="log">(vacío)</pre>
+
+  <p class="pie">Hecho por Eva · funciona con cPanel y cualquier DNS dinámico por URL</p>
+</main>
+
+<dialog id="dlgAyuda">
+  <div class="cuerpo">
+    <h2>Cómo conseguir la URL</h2>
+    <p>1. Entra en el cPanel de tu hosting.</p>
+    <p>2. Busca <b>«DNS dinámico»</b> / <b>«Dynamic DNS»</b> (sección Dominios o Avanzado).</p>
+    <p>3. Si no aparece, pide a tu proveedor el enlace de actualización automática de tu dominio o subdominio.</p>
+    <p>4. Crea el enlace y copia la URL completa.</p>
+    <p>5. Pégala arriba, tal cual. Si olvidas el <code>https://</code>, se añade solo.</p>
+    <p>6. Pulsa <b>«Actualizar ahora»</b> para probar.</p>
+    <p>Funciona igual con WiFi que con datos móviles: actualiza el DNS con la IP de la conexión que estés usando.</p>
+    <p><b>Aviso:</b> la URL es secreta. Quien la tenga puede cambiar tu DNS.</p>
+    <p><b>Nota:</b> el navegador no puede leer la respuesta del hosting (no manda CORS), así que la app envía la orden y luego <b>verifica por DNS</b> que el dominio apunta a tu IP. Eso es la prueba real.</p>
+  </div>
+  <button id="btnCerrar">Entendido</button>
+</dialog>
+
+<script>
+(function () {
+  "use strict";
+
+  var $ = function (s) { return document.querySelector(s); };
+  var LS = "ddns_pwa_v1";
+
+  var elUrl = $("#url"), elHost = $("#host"), elAuto = $("#auto"), elMins = $("#mins");
+  var elEstado = $("#estado"), elLog = $("#log");
+
+  function cfg() {
+    try { return JSON.parse(localStorage.getItem(LS) || "{}"); } catch (e) { return {}; }
+  }
+  function guardar() {
+    localStorage.setItem(LS, JSON.stringify({
+      url: elUrl.value.trim(),
+      host: elHost.value.trim(),
+      auto: elAuto.checked,
+      mins: parseInt(elMins.value, 10) || 10,
+      log: elLog.textContent
+    }));
+  }
+
+  function cargar() {
+    var c = cfg();
+    elUrl.value = c.url || "";
+    elHost.value = c.host || "";
+    elAuto.checked = !!c.auto;
+    elMins.value = String(c.mins || 10);
+    if (c.log && c.log !== "(vacío)") elLog.textContent = c.log;
+  }
+
+  function ahora() {
+    var d = new Date();
+    var p = function (n) { return (n < 10 ? "0" : "") + n; };
+    return p(d.getDate()) + "/" + p(d.getMonth() + 1) + " " + p(d.getHours()) + ":" + p(d.getMinutes()) + ":" + p(d.getSeconds());
+  }
+
+  function log(txt) {
+    var l = elLog.textContent;
+    if (l === "(vacío)") l = "";
+    var lineas = (l + "\n" + ahora() + "  " + txt).split("\n");
+    if (lineas.length > 200) lineas = lineas.slice(lineas.length - 200);
+    elLog.textContent = lineas.join("\n").replace(/^\n+/, "");
+    elLog.scrollTop = elLog.scrollHeight;
+    guardar();
+  }
+
+  function estado(html) { elEstado.innerHTML = html; }
+
+  function normaliza(u) {
+    u = (u || "").trim();
+    if (u && !/^https?:\/\//i.test(u)) u = "https://" + u;
+    return u;
+  }
+
+  async function ipPublica() {
+    var r = await fetch("https://api.ipify.org?format=json", { cache: "no-store" });
+    if (!r.ok) throw new Error("ipify HTTP " + r.status);
+    var j = await r.json();
+    return j.ip;
+  }
+
+  async function resolverA(host) {
+    try {
+      var r = await fetch("https://1.1.1.1/dns-query?name=" + encodeURIComponent(host) + "&type=A",
+                          { headers: { "Accept": "application/dns-json" }, cache: "no-store" });
+      if (!r.ok) return "?";
+      var j = await r.json();
+      var ans = j.Answer || [];
+      for (var i = 0; i < ans.length; i++) if (ans[i].type === 1) return ans[i].data;
+      return "?";
+    } catch (e) {
+      return "?";
+    }
+  }
+
+  var ocupado = false;
+  var timer = null;
+
+  async function actualizar() {
+    if (ocupado) return;
+    var url = normaliza(elUrl.value);
+    if (!url) {
+      estado('<span class="mal">Falta la URL.</span> Pulsa «¿Ayuda?» para ver cómo conseguirla.');
+      return;
+    }
+    if (url !== elUrl.value.trim()) elUrl.value = url;
+    guardar();
+
+    ocupado = true;
+    estado("Trabajando…");
+
+    var host = elHost.value.trim();
+    var ip = null, dnsAntes = null;
+
+    try {
+      try {
+        ip = await ipPublica();
+        log("IP pública: " + ip);
+      } catch (e) {
+        log("IP pública: error (" + e.message + ")");
+      }
+
+      if (host) {
+        dnsAntes = await resolverA(host);
+        log("DNS antes:  " + host + " -> " + dnsAntes);
+      }
+
+      try {
+        await fetch(url, { mode: "no-cors", cache: "no-store" });
+        log("Petición enviada al hosting (respuesta no legible: sin CORS).");
+      } catch (e) {
+        log("ERROR enviando: " + e.message);
+      }
+
+      if (host) {
+        await new Promise(function (res) { setTimeout(res, 4000); });
+        var dnsDespues = await resolverA(host);
+        log("DNS después: " + host + " -> " + dnsDespues);
+
+        if (ip && dnsDespues === ip) {
+          estado('<span class="ok">✅ Correcto</span><br>Tu IP: ' + ip + '<br>' + host + ' apunta a esa IP.');
+        } else if (ip) {
+          estado('<span class="mal">⚠️ No coincide</span><br>Tu IP: ' + ip + '<br>' + host + ' → ' + dnsDespues +
+                 '<br><small>El hosting puede tardar unos minutos, o no aceptó la actualización.</small>');
+        } else {
+          estado('DNS: ' + host + ' → ' + dnsDespues);
+        }
+      } else {
+        estado('<span class="ok">Petición enviada</span><br>Tu IP: ' + (ip || "?") +
+               '<br><small>Añade un host arriba para verificar que el DNS quedó bien.</small>');
+      }
+    } catch (e) {
+      estado('<span class="mal">Error:</span> ' + e.message);
+      log("ERROR: " + e.message);
+    } finally {
+      ocupado = false;
+      guardar();
+    }
+  }
+
+  function arrancarTimer() {
+    if (timer) { clearInterval(timer); timer = null; }
+    if (elAuto.checked) {
+      var m = parseInt(elMins.value, 10) || 10;
+      timer = setInterval(actualizar, m * 60000);
+      log("Automático ON: cada " + m + " min (solo con la app abierta).");
+    }
+  }
+
+  elUrl.addEventListener("change", function () { elUrl.value = normaliza(elUrl.value); guardar(); });
+  elHost.addEventListener("change", guardar);
+  $("#btnGo").addEventListener("click", actualizar);
+  $("#btnClear").addEventListener("click", function () {
+    elLog.textContent = "(vacío)";
+    estado("Sin actividad todavía.");
+    guardar();
+  });
+  elAuto.addEventListener("change", function () { guardar(); arrancarTimer(); });
+  elMins.addEventListener("change", function () { guardar(); arrancarTimer(); });
+
+  var dlg = $("#dlgAyuda");
+  $("#btnAyuda").addEventListener("click", function () {
+    if (typeof dlg.showModal === "function") dlg.showModal();
+    else alert("Busca «DNS dinámico» en el cPanel de tu hosting y copia la URL del web call. Pégala arriba y pulsa Actualizar ahora.");
+  });
+  $("#btnCerrar").addEventListener("click", function () { if (dlg.close) dlg.close(); });
+
+  cargar();
+  if (elAuto.checked) arrancarTimer();
+})();
+</script>
+</body>
+</html>
